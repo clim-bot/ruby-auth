@@ -1,24 +1,38 @@
-# README
+## Generate the Project
+```shell
+rails new ruby-auth --css tailwind --javascript importmap --use-propshaft
+```
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## Setting Up Authentication
+```shell
+bin/rails generate authentication
+```
 
-Things you may want to cover:
+### Generating the Post Scaffold
+```
+bin/rails generate scaffold Post title:string body:text published:boolean
+```
 
-* Ruby version
+## Setting Up Seed User
+```shell
+puts "Starting to seed the database..."
 
-* System dependencies
+user = User.create!(
+  email_address: "admin@example.com",
+  password: "P@ssw0rd!",
+  password_confirmation: "P@ssw0rd!"
+)
 
-* Configuration
+puts "Seed successful! Created user: #{user.email_address} , #{user.password}"
+```
 
-* Database creation
+## Generating DB and Migrating Tables
+```shell
+bin/rails db:create
+bin/rails db:migrate
+```
 
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+## Running the app
+```shell
+bin/dev
+```
