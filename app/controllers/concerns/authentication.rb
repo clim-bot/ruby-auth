@@ -2,8 +2,9 @@ module Authentication
   extend ActiveSupport::Concern
 
   included do
-    before_action :require_authentication
-    helper_method :authenticated?
+    before_action :resume_session # Ensure session is resumed for authenticated users
+    before_action :require_authentication # Require authentication for actions that need it
+    helper_method :authenticated?, :current_user # Expose methods to views
   end
 
   class_methods do

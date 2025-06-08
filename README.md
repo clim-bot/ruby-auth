@@ -97,8 +97,9 @@ module Authentication
   extend ActiveSupport::Concern
 
   included do
-    before_action :require_authentication
-    helper_method :authenticated?, :current_user
+    before_action :resume_session # Ensure session is resumed for authenticated users
+    before_action :require_authentication # Require authentication for actions that need it
+    helper_method :authenticated?, :current_user # Expose methods to views
   end
 
   # ...existing code...
@@ -166,7 +167,18 @@ end
 
 ```
 
-## Optional Redirect
+## Removing the User ID from the New Post Form
+Since we are already have the controller logic for it, the form doesn't need to handle user assignments.
+Remove this line from `app/views/posts/_form.html.erb`.
+```erb
+<div class="my-5">
+  <%= form.label :user_id %>
+  <%= form.text_field :user_id, class: ["block shadow-sm rounded-md border px-3 py-2 mt-2 w-full", {"border-gray-400 focus:outline-blue-600": post.errors[:user_id].none?, "border-red-400 focus:outline-red-600": post.errors[:user_id].any?}] %>
+</div>
+```
+
+## Optionals
+### 404 Page
 If the page does not exist, we can use ruby's built in 404 page. By updating the
 `app/controllers/application_controller.rb`
 ```ruby
@@ -184,4 +196,31 @@ class ApplicationController < ActionController::Base
     render file: Rails.root.join("public/404.html"), status: :not_found, layout: false
   end
 end
+```
+
+### Logout button
+If you want to add a logout button, you need to go to `app/views` and make a folder called `shared`
+and then create a partial `_header.html.erb`
+```erb
+<nav class="w-full">
+  <div class="flex justify-end items-center py-4 px-6">
+    <% if current_user %>
+      <%= button_to "Logout", logout_path, method: :delete, class: "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded" %>
+    <% end %>
+  </div>
+</nav>
+```
+And after that go to `app/views/layouts/application.html.erb` and add this line of code inside the `<body>` tag, ussually right after `<body>`.
+```erb
+<%= render "shared/header" %>
+```
+
+### Hidding Show and Destroy Posts
+We need to use the ERB conditional block to hide the `edit` and `destroy` post.
+For example in the `app/views/posts/index.html.erb`:
+```erb
+<% if current_user %>
+  <%= link_to "Edit", edit_post_path(post), class: "w-full sm:w-auto text-center rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+  <%= button_to "Destroy", post, method: :delete, class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 text-white bg-red-600 hover:bg-red-500 font-medium cursor-pointer", data: { turbo_confirm: "Are you sure?" } %>
+<% end %>
 ```
