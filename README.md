@@ -89,5 +89,99 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   root "posts#index"
 end
+```
+## Returns the User association with the current session
+We need to go to `app/controllers/concerns/authentication.rb` and create a method called `current_user`.
+```ruby
+module Authentication
+  extend ActiveSupport::Concern
 
+  included do
+    before_action :require_authentication
+    helper_method :authenticated?, :current_user
+  end
+
+  # ...existing code...
+
+  private
+    # ...existing methods...
+
+    # This method is called to ensure the user is logged in for actions that require it.
+    def current_user
+      Current.session&.user
+    end
+end
+```
+
+## Enforce Authentication Before Action
+None authenticated users can only view the blogs we need to include a before action and a private method. We need to update the `post_controller.rb`.
+```ruby
+class PostsController < ApplicationController
+  # This means users can view posts without logging in.
+  skip_before_action :verify_authenticity_token, only: [ :index, :show ]
+  # Allow unauthenticated access for index and show actions
+  allow_unauthenticated_access only: [ :index, :show ]
+  # This controller handles the CRUD operations for posts.
+  before_action :authenticate_user!, except: [ :index, :show ]
+  # Ensure the user is logged in for all actions except index and show
+  before_action :set_post, only: [ :show, :edit, :update, :destroy ]
+  # Ensure the post is set for actions that require it
+  before_action :authorize_user!, only: [ :edit, :update, :destroy ]
+
+  # rest of your controller...
+
+  # POST /posts or /posts.json
+  def create
+    # Build a new post associated with the current user
+    @post = current_user.posts.build(post_params)
+
+    respond_to do |format|
+      if @post.save
+        format.html { redirect_to @post, notice: "Post was successfully created." }
+        format.json { render :show, status: :created, location: @post }
+      else
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: @post.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+
+  private
+
+  # Use callbacks to share common setup or constraints between actions.
+  def set_post
+    @post = Post.find(params.expect(:id))
+  end
+
+  # Authenticate the user before allowing access to certain actions
+  def authorize_user!
+    redirect_to posts_path, alert: "Not authorized." unless @post.user == current_user
+  end
+
+  # Only allow a list of trusted parameters through.
+  def post_params
+      params.require(:post).permit(:title, :body, :published)
+  end
+end
+
+```
+
+## Optional Redirect
+If the page does not exist, we can use ruby's built in 404 page. By updating the
+`app/controllers/application_controller.rb`
+```ruby
+# app/controllers/application_controller.rb
+class ApplicationController < ActionController::Base
+  include Authentication
+  # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
+  allow_browser versions: :modern
+  # Enable CSRF protection for all actions except those that allow unauthenticated access.
+  rescue_from ActiveRecord::RecordNotFound, with: :not_found
+
+  private
+  # This method is called when a record is not found.
+  def not_found
+    render file: Rails.root.join("public/404.html"), status: :not_found, layout: false
+  end
+end
 ```

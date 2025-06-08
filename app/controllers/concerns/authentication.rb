@@ -49,4 +49,9 @@ module Authentication
       Current.session.destroy
       cookies.delete(:session_id)
     end
+
+    # This method is called to ensure the user is logged in for actions that require it.
+    def current_user
+      Current.session&.user
+    end
 end

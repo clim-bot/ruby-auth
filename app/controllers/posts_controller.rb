@@ -1,5 +1,14 @@
 class PostsController < ApplicationController
-  before_action :set_post, only: %i[ show edit update destroy ]
+  # This means users can view posts without logging in.
+  skip_before_action :verify_authenticity_token, only: [ :index, :show ]
+  # Allow unauthenticated access for index and show actions
+  allow_unauthenticated_access only: [ :index, :show ]
+  # This controller handles the CRUD operations for posts.
+  before_action :require_authentication, except: [ :index, :show ]
+  # Ensure the user is logged in for all actions except index and show
+  before_action :set_post, only: [ :show, :edit, :update, :destroy ]
+  # Ensure the post is set for actions that require it
+  before_action :authorize_user!, only: [ :edit, :update, :destroy ]
 
   # GET /posts or /posts.json
   def index
@@ -21,7 +30,8 @@ class PostsController < ApplicationController
 
   # POST /posts or /posts.json
   def create
-    @post = Post.new(post_params)
+    # Build a new post associated with the current user
+    @post = current_user.posts.build(post_params)
 
     respond_to do |format|
       if @post.save
@@ -60,11 +70,16 @@ class PostsController < ApplicationController
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_post
-      @post = Post.find(params.expect(:id))
+      @post = Post.find(params[:id])
+    end
+
+    # Authenticate the user before allowing access to certain actions
+    def authorize_user!
+      redirect_to posts_path, alert: "Not authorized." unless @post.user == current_user
     end
 
     # Only allow a list of trusted parameters through.
     def post_params
-      params.expect(post: [ :title, :body, :published, :user_id ])
+      params.require(:post).permit(:title, :body, :published)
     end
 end
