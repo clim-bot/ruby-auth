@@ -219,7 +219,17 @@ And after that go to `app/views/layouts/application.html.erb` and add this line 
 We need to use the ERB conditional block to hide the `edit` and `destroy` post.
 For example in the `app/views/posts/index.html.erb`:
 ```erb
-<% if current_user %>
+<%# app/views/posts/index.html.erb %>
+<% if current_user == post.user %>
+  <%= link_to "Edit", edit_post_path(post), class: "w-full sm:w-auto text-center rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+  <%= button_to "Destroy", post, method: :delete, class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 text-white bg-red-600 hover:bg-red-500 font-medium cursor-pointer", data: { turbo_confirm: "Are you sure?" } %>
+<% end %>
+
+<%# app/views/posts/show.html.erb
+In the show action/view, Rails sets the instance variable @post.
+post (without @) would only be defined in loops (like in index with @posts.each do |post| ... end).
+Using @post is the “Rails way” in the show template. %>
+<% if current_user == @post.user %>
   <%= link_to "Edit", edit_post_path(post), class: "w-full sm:w-auto text-center rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
   <%= button_to "Destroy", post, method: :delete, class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 text-white bg-red-600 hover:bg-red-500 font-medium cursor-pointer", data: { turbo_confirm: "Are you sure?" } %>
 <% end %>
